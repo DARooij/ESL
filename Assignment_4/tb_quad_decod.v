@@ -1,3 +1,5 @@
+
+`include "quad_decod.v"
 `timescale 1ns/1ps
 
 module tb_quad_decod;
@@ -7,7 +9,8 @@ module tb_quad_decod;
     reg clk;
     wire [15:0] count;
     wire [1:0] direction;
-    wire [1:0] err;
+    integer i;
+    integer j;
 
 
     quad_decod #() dut (
@@ -15,8 +18,7 @@ module tb_quad_decod;
         .quadB(quadB),
         .clk(clk),
         .count(count),
-        .direction(direction),
-        .err(err)
+        .direction(direction)
     );
 
     initial 
@@ -28,16 +30,42 @@ module tb_quad_decod;
     initial
     begin
         quadA = 1;
-        forever #10 quadA = ~quadA;
+        for (i = 0; i < 10; i = i + 1) begin
+            #100;
+            quadA = ~quadA;
+        end
+
+        quadA = 0;
+        #100;
+        quadA = 1;
+        for (i = 0; i < 10; i = i + 1) begin
+            #100;
+            quadA = ~quadA;
+        end
     end
 
     initial 
     begin
         quadB = 0;
-        #5
+        #50;
         quadB = 1;
-        #5
-        forever #5 quadB = ~quadB;
+        for (j = 0; j < 10; j = j + 1) begin
+            #100;
+            quadB = ~quadB;
+        end
+
+        quadB = 1;
+        for (j = 0; j < 10; j = j + 1) begin
+            #100;
+            quadB = ~quadB;
+        end
+    end
+
+    initial begin
+        $dumpfile("signals.vcd");
+        $dumpvars(0, tb_quad_decod);
+        #10000;
+        $finish;
     end
 
 endmodule
