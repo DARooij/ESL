@@ -37,33 +37,45 @@ bus_call (GstBus     *bus,
 }
 
 
-static void
-on_pad_added (GstElement *element,
-              GstPad     *pad,
-              gpointer    data)
-{
-  GstPad *sinkpad;
-  GstElement *decoder = (GstElement *) data;
+static GstFlowReturn new_sample (GstElement *sink, gpointer *data) {
+  GstSample *sample;
+  GstStructure *structure;
+  GstCaps *caps;
+  gint width, height;
 
-  /* We can now link this pad with the vorbis-decoder sink pad */
-  g_print ("Dynamic pad created, linking demuxer/decoder\n");
 
-  sinkpad = gst_element_get_static_pad (decoder, "sink");
+  /* Retrieve the buffer */
+  g_signal_emit_by_name (sink, "pull-sample", &sample);
+  if (!sample) {
+    // g_print ("*");
+    return GST_FLOW_ERROR;
+  }
 
-  gst_pad_link (pad, sinkpad);
+  caps = gst_sample_get_caps(sample);
+  if (!caps) {
+    gst_sample_unref(sample);
+    g_print ("Could not get caps from sample\n");
+    return GST_FLOW_ERROR;
+  }
 
-  gst_object_unref (sinkpad);
+   structure = gst_caps_get_structure (caps, 0);
+   if(gst_structure_get_int (structure, "width", &width) && gst_structure_get_int (structure, "height", &height)) {
+    g_print ("Width: %d, Height: %d\n", width, height);  
+   } else {
+    g_print ("Could not get width and height from caps\n");
+    return GST_FLOW_FLUSHING;
+   }
+
+  return GST_FLOW_OK;
 }
 
-
-
-int
-main (int   argc,
+int main (int   argc,
       char *argv[])
 {
   GMainLoop *loop;
 
   GstElement *pipeline, *source, *encoder, *decoder, *sink;
+  GstCaps *format;
   GstBus *bus;
   guint bus_watch_id;
 
@@ -77,7 +89,7 @@ main (int   argc,
   source   = gst_element_factory_make ("v4l2src",       "video-source");
   encoder  = gst_element_factory_make ("jpegenc",      "jpeg-encoder");
   decoder     = gst_element_factory_make ("jpegdec",  "jpeg-decoder");
-  sink     = gst_element_factory_make ("filesink", "file-sink");
+  sink     = gst_element_factory_make ("appsink", "app-sink");
 
   if (!pipeline || !source || !encoder || !decoder || !sink) {
     g_printerr ("One element could not be created. Exiting.\n");
@@ -85,7 +97,8 @@ main (int   argc,
   }
 
   g_object_set (source, "device", "/dev/video0", NULL);
-  g_object_set (sink, "location", "file.yuv", NULL);
+  g_object_set (sink, "emit-signals", TRUE, NULL);
+  g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), NULL);
 
   format  = gst_caps_from_string("image/jpeg, width=320, height=240, framerate=30/1");
 
@@ -112,7 +125,7 @@ main (int   argc,
      Therefore we connect a callback function which will be executed
      when the "pad-added" is emitted.*/
 
-  gst_caps_urnef(format);
+  gst_caps_unref(format);
 
   /* Set the pipeline to "playing" state*/
   g_print ("Now playing: %s\n", argv[1]);
