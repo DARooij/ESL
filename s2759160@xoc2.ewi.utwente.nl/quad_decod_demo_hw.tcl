@@ -20,13 +20,13 @@
 ## IP details
 ##  
 set_module_property DESCRIPTION "Quad decoder with avalon slave interface"
-set_module_property NAME quad decoder 
+set_module_property NAME quad_decoder
 set_module_property VERSION 1.0
 set_module_property GROUP Templates
 set_module_property AUTHOR Moll
 set_module_property DISPLAY_NAME Quad Decoder
-set_module_property TOP_LEVEL_HDL_FILE quad_decod_demo.v
-set_module_property TOP_LEVEL_HDL_MODULE quad_decod_demo
+set_module_property TOP_LEVEL_HDL_FILE esl_bus_demo.v
+set_module_property TOP_LEVEL_HDL_MODULE esl_bus_demo
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
 set_module_property EDITABLE false
 set_module_property SIMULATION_MODEL_IN_VERILOG false
@@ -47,7 +47,7 @@ set_module_property VALIDATION_CALLBACK validate_me
 ## Files
 ## - List all files required by the IP
 ##  
-add_file quad_decod_demo.v {SYNTHESIS SIMULATION}
+add_file esl_bus_demo.v {SYNTHESIS SIMULATION}
 add_file quad_decod.v {SYNTHESIS SIMULATION}
 
 ## 
@@ -101,7 +101,7 @@ set_interface_property s0 addressAlignment DYNAMIC
 set_interface_property s0 maximumPendingReadTransactions 0
 set_interface_property s0 readWaitTime 0
 set_interface_property s0 readLatency 3
-set_interface_property Cs0 printableDevice false
+set_interface_property s0 printableDevice false
 set_interface_property s0 ASSOCIATED_CLOCK clock_reset
 
 add_interface_port s0 slave_address address Input 9
@@ -117,8 +117,8 @@ add_interface_port s0 slave_writedata writedata Input -1
 ##
 
 add_interface user_interface conduit end
-add_interface_port user_interface PITCH_ENC_A export Input 1
-add_interface_port user_interface PITCH_ENC_B export Input 1
+add_interface_port user_interface user_output export Output 2
+add_interface_port user_interface user_output_2 export Output 1
 
 ##
 ## - Validation/ elaboration functions

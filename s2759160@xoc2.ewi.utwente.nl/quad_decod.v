@@ -8,24 +8,15 @@ module quad_decod(
     input quadA, 
     input quadB, 
     input clk, 
-    input reset,
-    output wire [15:0] out, 
-    output wire [1:0] direction_out
+    output reg [15:0] count = 0, 
+    output reg [1:0] direction = 0
 );
 
-    reg [15:0] count = 0;
-    reg [1:0] direction = 0;
     reg [1:0] curr_state;
     reg [1:0] prev_state = 2'b00;
 
-always @ (posedge clk or posedge reset)
+always @ (posedge clk)
 begin
-    if (reset)
-        begin
-            count <= 0;
-            direction <= 0;
-            prev_state <= 2'b00;
-        end
     
     curr_state <= {quadA, quadB};
 
@@ -36,13 +27,13 @@ begin
                     begin
                         count <= count + 1;
                         prev_state <= curr_state;
-                        direction <= 2'b01; //right
+                        direction = 2'b01; //right
                     end 
                 else if (prev_state == 2'b10)
                     begin
                        count <= count - 1;
                        prev_state <= curr_state;
-                       direction <= 2'b10; //left 
+                       direction = 2'b10; //left 
                     end
             end
         2'b01:
@@ -51,13 +42,13 @@ begin
                     begin
                         count <= count - 1;
                         prev_state <= curr_state;
-                        direction <= 2'b10; //left
+                        direction = 2'b10; //left
                     end 
                 else if (prev_state == 2'b11)
                     begin
                        count <= count + 1;
                        prev_state <= curr_state;
-                       direction <= 2'b01; //right 
+                       direction = 2'b01; //right 
                     end
             end
         2'b10:
@@ -66,13 +57,13 @@ begin
                     begin
                         count <= count + 1;
                         prev_state <= curr_state;
-                        direction <= 2'b10; //right
+                        direction = 2'b10; //right
                     end 
                 else if (prev_state == 2'b11)
                     begin
                        count <= count - 1;
                        prev_state <= curr_state;
-                       direction <= 2'b01; //left 
+                       direction = 2'b01; //left 
                     end
             end
         2'b11:
@@ -81,20 +72,17 @@ begin
                     begin
                         count <= count + 1;
                         prev_state <= curr_state;
-                        direction <= 2'b10; //right
+                        direction = 2'b10; //right
                     end 
                 else if (prev_state == 2'b01)
                     begin
                        count <= count - 1;
                        prev_state <= curr_state;
-                       direction <= 2'b01; //left 
+                       direction = 2'b01; //left 
                     end
             end
     endcase
 
 end
-
-assign out = count;
-assign direction_out = direction;
 
 endmodule
