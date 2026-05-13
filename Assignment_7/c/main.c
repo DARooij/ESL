@@ -25,7 +25,11 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	*((uint32_t *)esl_demo_map) = 1 << 31 | 0x08;
+	// *((uint32_t *)esl_demo_map) = 1 << 31 | 0x08;
+	
+	uint16_t value = *((uint16_t *)esl_demo_map);
+	printf("Count: 0x%04x (%d)\n", value, value);
+	
 	close(fd);
 	return 0;
 }

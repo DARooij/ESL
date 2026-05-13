@@ -117,8 +117,9 @@ add_interface_port s0 slave_writedata writedata Input -1
 ##
 
 add_interface user_interface conduit end
-add_interface_port user_interface PITCH_ENC_A export Input 1
-add_interface_port user_interface PITCH_ENC_B export Input 1
+# add_interface_port user_interface PITCH_ENC_A export Input 1
+# add_interface_port user_interface PITCH_ENC_B export Input 1
+add_interface_port user_interface SW export Input 4
 
 ##
 ## - Validation/ elaboration functions

@@ -11,8 +11,9 @@ module quad_decod_demo #(
         input  wire [(DATA_WIDTH/8)-1:0] slave_byteenable,
 		// output wire [15:0]  user_output,         // user_output.new_signal
         // output wire [1:0] user_output_2 // user_output_2.new_signal
-        input wire PITCH_ENC_A,
-        input wire PITCH_ENC_B
+        // input wire PITCH_ENC_A,
+        // input wire PITCH_ENC_B
+        input wire [3:0] SW
 	);
 
     
@@ -23,8 +24,10 @@ module quad_decod_demo #(
     quad_decod my_ip (
         .clk(clk),
         .reset(reset),
-        .quadA(PITCH_ENC_A),
-        .quadB(PITCH_ENC_B),
+        // .quadA(PITCH_ENC_A),
+        // .quadB(PITCH_ENC_B),
+        .quadA(SW[0]),
+        .quadB(SW[1]),
         .out(count),
         .direction_out(direction)
     );
