@@ -9,7 +9,7 @@ module quad_decod_demo #(
 		input  wire        clk,          //       clock.clk
         input  wire        reset,
         input  wire [(DATA_WIDTH/8)-1:0] slave_byteenable,
-		// output wire [15:0]  user_output,         // user_output.new_signal
+		output wire [7:0]  user_output,         // user_output.new_signal
         // output wire [1:0] user_output_2 // user_output_2.new_signal
         // input wire PITCH_ENC_A,
         // input wire PITCH_ENC_B
@@ -32,6 +32,7 @@ module quad_decod_demo #(
         .direction_out(direction)
     );
 
+    assign user_output = count[7:0];
 
     always @(posedge clk or posedge reset) begin
         if (reset) begin
