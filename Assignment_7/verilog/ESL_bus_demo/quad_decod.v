@@ -15,8 +15,15 @@ module quad_decod(
 
     reg [15:0] count = 0;
     reg [1:0] direction = 0;
-    reg [1:0] curr_state;
+    reg [1:0] curr_state = 2'b00;
     reg [1:0] prev_state = 2'b00;
+    reg [1:0] sync = 2'b00;
+
+always @ (posedge clk)
+begin
+    sync <= {quadA, quadB};
+    curr_state <= sync;
+end
 
 always @ (posedge clk or posedge reset)
 begin
@@ -27,8 +34,6 @@ begin
             prev_state <= 2'b00;
         end
     
-    curr_state <= {quadA, quadB};
-
     case (curr_state)
         2'b00:
             begin

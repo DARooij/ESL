@@ -19,14 +19,14 @@
 ## 
 ## IP details
 ##  
-set_module_property DESCRIPTION "Quad decoder with avalon slave interface"
-set_module_property NAME quad decoder 
+set_module_property DESCRIPTION "pwm module with avalon slave interface"
+set_module_property NAME pwm_module
 set_module_property VERSION 1.0
 set_module_property GROUP Templates
 set_module_property AUTHOR Moll
-set_module_property DISPLAY_NAME Quad Decoder
-set_module_property TOP_LEVEL_HDL_FILE quad_decod_demo.v
-set_module_property TOP_LEVEL_HDL_MODULE quad_decod_demo
+set_module_property DISPLAY_NAME PWM_Module
+set_module_property TOP_LEVEL_HDL_FILE pwm_mod_demo.v
+set_module_property TOP_LEVEL_HDL_MODULE pwm_mod_demo
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
 set_module_property EDITABLE false
 set_module_property SIMULATION_MODEL_IN_VERILOG false
@@ -47,8 +47,8 @@ set_module_property VALIDATION_CALLBACK validate_me
 ## Files
 ## - List all files required by the IP
 ##  
-add_file quad_decod_demo.v {SYNTHESIS SIMULATION}
-add_file quad_decod.v {SYNTHESIS SIMULATION}
+add_file pwm_mod_demo.v {SYNTHESIS SIMULATION}
+add_file pwm_mod.v {SYNTHESIS SIMULATION}
 
 ## 
 ## IP parameters
@@ -104,7 +104,7 @@ set_interface_property s0 readLatency 3
 set_interface_property Cs0 printableDevice false
 set_interface_property s0 ASSOCIATED_CLOCK clock_reset
 
-add_interface_port s0 slave_address address Input 9
+add_interface_port s0 slave_address address Input 8
 add_interface_port s0 slave_read read Input 1
 add_interface_port s0 slave_write write Input 1
 add_interface_port s0 slave_readdata readdata Output -1
@@ -116,17 +116,16 @@ add_interface_port s0 slave_writedata writedata Input -1
 ##   add_interface_port user_interface (YOUR_PORT) export (DIRECTION) (WIDTH)
 ##
 
-add_interface switches conduit end
-# add_interface_port user_interface PITCH_ENC_A export Input 1
-# add_interface_port user_interface PITCH_ENC_B export Input 1
-add_interface_port switches SW export Input 4
-
-add_interface leds conduit end
-add_interface_port leds user_output export Output 1
+add_interface pwm_output conduit end
+add_interface_port pwm_output pwm_output export Output 1
+add_interface directionA conduit end
+add_interface_port directionA directionA_out export Output 1
+add_interface directionB conduit end
+add_interface_port directionB directionB_out export Output 1
 
 ##
 ## - Validation/ elaboration functions
-##Assignment_6
+##
 proc validate_me {} {
 }
 
@@ -140,8 +139,9 @@ proc elaborate_me {}  {
   set_port_property slave_writedata WIDTH $the_data_width
 
   ## Set data with for the custom logic
-  set_port_property user_output WIDTH 8
-  set_port_property SW WIDTH 4
+  set_port_property directionA_out WIDTH 1
+  set_port_property directionB_out WIDTH 1
+  set_port_property pwm_output WIDTH 1
   
   ## DO NOT REMOVE:
   ## adding the slave_byteenable and user_byteenable signals only if the data width is greater than 8 bits
