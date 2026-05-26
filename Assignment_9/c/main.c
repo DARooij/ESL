@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 	uint8_t* esl_demo_map = NULL;
-	esl_demo_map = (uint8_t*)mmap(NULL, HPS_0_ARM_A9_0_QUAD_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_QUAD_0_BASE);
+	esl_demo_map = (uint8_t*)mmap(NULL, HPS_0_ARM_A9_0_PWM_MODULE_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_PWM_MODULE_0_BASE);
 	if (esl_demo_map == MAP_FAILED) {
 		perror("Couldn't map bridge.");
 		close(fd);

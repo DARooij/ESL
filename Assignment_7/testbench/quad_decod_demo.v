@@ -39,7 +39,7 @@ module quad_decod_demo #(
             slave_readdata <= 32'b0;
         end else begin
             if (slave_read) begin
-                slave_readdata <= {14'b0, direction, count };
+                slave_readdata <= {14'b0, direction, count};
             end
         end;
     end

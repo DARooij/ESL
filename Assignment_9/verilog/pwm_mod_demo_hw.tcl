@@ -122,6 +122,8 @@ add_interface directionA conduit end
 add_interface_port directionA directionA_out export Output 1
 add_interface directionB conduit end
 add_interface_port directionB directionB_out export Output 1
+add_interface duty_cycle_out conduit end
+add_interface_port duty_cycle_out duty_cycle_out export Output 1
 
 ##
 ## - Validation/ elaboration functions
@@ -142,6 +144,7 @@ proc elaborate_me {}  {
   set_port_property directionA_out WIDTH 1
   set_port_property directionB_out WIDTH 1
   set_port_property pwm_output WIDTH 1
+  set_port_property duty_cycle_out WIDTH 8
   
   ## DO NOT REMOVE:
   ## adding the slave_byteenable and user_byteenable signals only if the data width is greater than 8 bits

@@ -117,9 +117,11 @@ add_interface_port s0 slave_writedata writedata Input -1
 ##
 
 add_interface switches conduit end
-# add_interface_port user_interface PITCH_ENC_A export Input 1
-# add_interface_port user_interface PITCH_ENC_B export Input 1
-add_interface_port switches SW export Input 4
+add_interface PITCH_ENCODER_A conduit end
+add_interface_port PITCH_ENCODER_A PITCH_ENC_A export Input 1
+add_interface PITCH_ENCODER_B conduit end
+add_interface_port PITCH_ENCODER_B PITCH_ENC_B export Input 1
+# add_interface_port switches SW export Input 4
 
 add_interface leds conduit end
 add_interface_port leds user_output export Output 1
@@ -141,7 +143,8 @@ proc elaborate_me {}  {
 
   ## Set data with for the custom logic
   set_port_property user_output WIDTH 8
-  set_port_property SW WIDTH 4
+  set_port_property PITCH_ENC_A WIDTH 1
+  set_port_property PITCH_ENC_B WIDTH 1
   
   ## DO NOT REMOVE:
   ## adding the slave_byteenable and user_byteenable signals only if the data width is greater than 8 bits

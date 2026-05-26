@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "soc_system.h"
 
 int main(int argc, char** argv) {
 	int fd = 0;
-
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd < 0) {
 		perror("Couldn't open /dev/mem\n");
@@ -25,9 +25,17 @@ int main(int argc, char** argv) {
 	}
 
 	// *((uint32_t *)esl_demo_map) = 1 << 31 | 0x08;
-	
-	uint16_t value = *((uint16_t *)esl_demo_map);
-	printf("Count: 0x%04x (%d)\n", value, value);
+
+
+	while(1) {
+		uint32_t data = *((uint32_t *)esl_demo_map);
+		uint16_t value = *((uint16_t *)esl_demo_map);
+		bool left = (bool)((data) & (1 << 16));
+		bool right = (bool)((data) & (1 << 17));
+		printf("Left: %d\n", left);
+		printf("Right: %d\n", right);
+		printf("Count: 0x%04x (%d)\n", value, value);
+	}
 	
 	close(fd);
 	return 0;
