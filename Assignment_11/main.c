@@ -160,12 +160,15 @@ int main(int argc, char *argv[]) {
   if (fd < 0)
     return 1;
 
+  TXBuf[0] = 0;
+  
+  spiWrite(fd, speed, TXBuf, bytes);
+  spiRead(fd, speed, RXBuf, bytes);
+
   for (i = 0; i < loops; i++) {
-    if (i % 2) {
-      TXBuf[0] = 255;
-    } else {
-      TXBuf[0] = 0;
-    }
+
+    TXBuf[0] = RXBuf[0] + 1;
+
     spiXfer(fd, speed, TXBuf, RXBuf, bytes);
     printf("TX: %d, RX: %d\n", TXBuf[0], RXBuf[0]);
   }

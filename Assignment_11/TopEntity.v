@@ -13,7 +13,8 @@ module TopEntity (
     input  SPI_PICO,
     input  SPI_CS,
     output SPI_POCI,
-    output led2
+    output led2,
+    output led1
 );
 
   reg [2:0] SPI_CLKr;
@@ -33,7 +34,7 @@ module TopEntity (
 
   reg [2:0] bitcnt;
   reg byte_received;
-  reg [7:0] byte_data_received;
+  reg [7:0] byte_data_received = 0;
 
   always @(posedge clk) begin
     if (~SPI_CS_active) bitcnt <= 3'b000;
@@ -49,8 +50,11 @@ module TopEntity (
   always @(posedge clk) if (byte_received) led2 <= byte_data_received[0];
 
   reg [7:0] byte_data_sent;
-  reg [7:0] cnt;
-  always @(posedge clk) if (SPI_CS_startmessage) cnt <= cnt + 8'h1;
+  reg [7:0] cnt = 0;
+  always @(posedge clk) if (byte_received) cnt <= byte_data_received + 8'h1;
+
+  reg led1 = 0;
+  always @(posedge clk) if(byte_data_received == 255) led1 <= ~led1;
 
   always @(posedge clk)
     if (SPI_CS_active) begin
