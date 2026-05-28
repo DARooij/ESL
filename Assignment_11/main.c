@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
   
   spiWrite(fd, speed, TXBuf, bytes);
   spiRead(fd, speed, RXBuf, bytes);
-
+  
   for (i = 0; i < loops; i++) {
 
     TXBuf[0] = RXBuf[0] + 1;

@@ -54,7 +54,7 @@ module TopEntity (
   always @(posedge clk) if (byte_received) cnt <= byte_data_received + 8'h1;
 
   reg led1 = 0;
-  always @(posedge clk) if(byte_data_received == 255) led1 <= ~led1;
+  always @(posedge clk) if (byte_received && (byte_data_received == 8'hFF)) led1 <= ~led1;
 
   always @(posedge clk)
     if (SPI_CS_active) begin
