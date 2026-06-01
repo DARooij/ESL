@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <cstdint>
+#include <string.h>
+
 #include "FPGA_Interface.hpp"
 
 #define SPI_CHANNEL 1

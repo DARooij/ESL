@@ -7,5 +7,5 @@ hierarchy -check -top TopEntity
 
 synth_ice40 -top TopEntity -json ice40.json
 
-shell nextpnr-ice40 --hx8k --json ice40.json --pcf ico-jiwy.pcf --asc ice40.asc
-shell icepack ice40.asc ice40.bin
+# exec -- nextpnr-ice40 --hx8k --json ice40.json --pcf ico-jiwy.pcf --asc ice40.asc
+# exec -- icepack ice40.asc ice40.bin

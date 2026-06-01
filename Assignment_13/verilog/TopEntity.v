@@ -13,14 +13,10 @@ module TopEntity (
   input YAW_ENC_A,
   input YAW_ENC_B,
 
-  // input [7:0] PITCH_DUTY_CYCLE,
-  // input PITCH_DIRECTION,
   output wire PITCH_DIRA,
   output wire PITCH_DIRB,
   output wire PITCH_PWM_VAL,
 
-  // input [7:0] YAW_DUTY_CYCLE,
-  // input YAW_DIRECTION,
   output wire YAW_DIRA,
   output wire YAW_DIRB,
   output wire YAW_PWM_VAL
