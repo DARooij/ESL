@@ -45,5 +45,5 @@ set_io --warn-no-port SPI_PICO  A6
 set_io --warn-no-port SPI_CLK  H11
 set_io --warn-no-port SPI_CS  D4
 
-set_io --warn-no-port btn1 K11
+set_io --warn-no-port rst K11
 set_io --warn-no-port btn2 P13

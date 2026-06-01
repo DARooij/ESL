@@ -52,7 +52,6 @@ module SPI (
   always @(posedge clk) if (byte_received) led2 <= byte_data_received[0];
 
   reg [63:0] byte_data_sent;
-  reg [63:0] SPI_DATA_IN;
 
   always @(posedge clk)
     if (SPI_CS_active) begin

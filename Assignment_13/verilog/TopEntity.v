@@ -6,9 +6,7 @@ module TopEntity (
   input  SPI_CLK,
   input  SPI_PICO,
   input  SPI_CS,
-  input [63:0] SPI_DATA_IN,
   output SPI_POCI,
-  output [63:0] SPI_DATA_OUT,
 
   input PITCH_ENC_A, 
   input PITCH_ENC_B, 
@@ -17,14 +15,14 @@ module TopEntity (
 
   // input [7:0] PITCH_DUTY_CYCLE,
   // input PITCH_DIRECTION,
-  output wire PITCH_DIR_A,
-  output wire PITCH_DIR_B,
+  output wire PITCH_DIRA,
+  output wire PITCH_DIRB,
   output wire PITCH_PWM_VAL,
 
   // input [7:0] YAW_DUTY_CYCLE,
   // input YAW_DIRECTION,
-  output wire YAW_DIR_A,
-  output wire YAW_DIR_B,
+  output wire YAW_DIRA,
+  output wire YAW_DIRB,
   output wire YAW_PWM_VAL
 
 );
@@ -59,7 +57,7 @@ SPI spi_interface(
   .SPI_CS(SPI_CS),
   .SPI_DATA_IN(SPI_DATA_IN),
   .SPI_POCI(SPI_POCI),
-  .spi_DATA_OUT(SPI_DATA_OUT)
+  .SPI_DATA_OUT(SPI_DATA_OUT)
 );
 
 pwm_mod yaw_pwm(
@@ -67,9 +65,9 @@ pwm_mod yaw_pwm(
   .rst(rst),
   .duty_cycle(SPI_DATA_OUT[7:0]),
   .direction(SPI_DATA_OUT[9:8]),
-  .PWM_OUT(YAW_PWM_VAL),
-  .DIR_A(YAW_DIR_A),
-  .DIR_B(YAW_DIR_B)
+  .pwm_out(YAW_PWM_VAL),
+  .directionA(YAW_DIR_A),
+  .directionB(YAW_DIR_B)
 );
 
 pwm_mod pitch_pwm(
@@ -77,9 +75,9 @@ pwm_mod pitch_pwm(
   .rst(rst),
   .duty_cycle(SPI_DATA_OUT[39:32]),
   .direction(SPI_DATA_OUT[41:40]),
-  .PWM_OUT(PITCH_PWM_VAL),
-  .DIR_A(PITCH_DIR_A),
-  .DIR_B(PITCH_DIR_B)
+  .pwm_out(PITCH_PWM_VAL),
+  .directionA(PITCH_DIR_A),
+  .directionB(PITCH_DIR_B)
 );
 
 always @ (posedge clk) begin

@@ -1,7 +1,7 @@
 
 module pwm_mod (
     input clk,
-    input reset,
+    input rst,
     input [7:0] duty_cycle,
     input [1:0] direction,
     output wire directionA,
@@ -27,10 +27,10 @@ assign safe_duty = (duty_cycle > 8'd100) ? 8'd100 : duty_cycle;
 
 assign counter_theshold = THRESHOLD_CONST * safe_duty;
 
-always @ (posedge clk or posedge reset)
+always @ (posedge clk or posedge rst)
 begin
         
-    if (reset)
+    if (rst)
         begin
             pwm_reg <= 0;
             counter <= 0;

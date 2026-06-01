@@ -8,7 +8,7 @@ module quad_decod(
     input quadA, 
     input quadB, 
     input clk, 
-    input reset,
+    input rst,
     output wire [15:0] out, 
     output wire [1:0] direction_out
 );
@@ -25,9 +25,9 @@ begin
     curr_state <= sync;
 end
 
-always @ (posedge clk or posedge reset)
+always @ (posedge clk or posedge rst)
 begin
-    if (reset)
+    if (rst)
         begin
             count <= 0;
             direction <= 0;
