@@ -14,7 +14,9 @@ int main() {
 
     while(1)
     {
+
 		FPGAInterface::spiRead(spi, SPI_SPEED, RXBuf, 8);
+
 
 		uint32_t panEncoderValue;
 		uint32_t tiltEncoderValue;

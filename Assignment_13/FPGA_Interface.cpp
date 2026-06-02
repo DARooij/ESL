@@ -13,11 +13,11 @@ namespace FPGAInterface
     {
         int fd;
         char spiMode;
-        char spiBits = 64;
+        char spiBits = 8;
         char dev[32];
 
         spiMode = spiFlags & 3;
-        spiBits = 64;
+        spiBits = 8;
 
         sprintf(dev, "/dev/spidev0.%d", spiChan);
 
@@ -59,7 +59,7 @@ namespace FPGAInterface
         spi.len = count;
         spi.speed_hz = speed;
         spi.delay_usecs = 0;
-        spi.bits_per_word = 64;
+        spi.bits_per_word = 8;
         spi.cs_change = 0;
 
         err = ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
@@ -79,7 +79,7 @@ namespace FPGAInterface
         spi.len = count;
         spi.speed_hz = speed;
         spi.delay_usecs = 0;
-        spi.bits_per_word = 64;
+        spi.bits_per_word = 8;
         spi.cs_change = 0;
 
         err = ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
@@ -99,7 +99,7 @@ namespace FPGAInterface
         spi.len = count;
         spi.speed_hz = speed;
         spi.delay_usecs = 0;
-        spi.bits_per_word = 64;
+        spi.bits_per_word = 8;
         spi.cs_change = 0;
 
         err = ioctl(fd, SPI_IOC_MESSAGE(1), &spi);

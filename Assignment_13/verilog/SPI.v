@@ -32,36 +32,57 @@ module SPI (
   always @(posedge clk) SPI_PICOr <= {SPI_PICOr[0], SPI_PICO};
   wire SPI_PICO_data = SPI_PICOr[1];
 
-  reg [6:0] bitcnt;
+  reg [2:0] bitcnt;
   reg byte_received;
-  reg [63:0] byte_data_received;
+  reg [7:0] byte_data_received;
 
   always @(posedge clk) begin
     if (~SPI_CS_active) bitcnt <= 0;
     else if (SPI_CLK_risingedge) begin
       bitcnt <= bitcnt + 1;
-      byte_data_received <= {byte_data_received[62:0], SPI_PICO_data};
+      byte_data_received <= {byte_data_received[6:0], SPI_PICO_data};
     end
   end
 
-  assign SPI_DATA_OUT = byte_data_received;
-
-  always @(posedge clk) byte_received <= SPI_CS_active && SPI_CLK_risingedge && (bitcnt == 7'b1111111);
+  always @(posedge clk) byte_received <= SPI_CS_active && SPI_CLK_risingedge && (bitcnt == 3'b111);
 
   reg led2;
   always @(posedge clk) if (byte_received) led2 <= byte_data_received[0];
 
-  reg [63:0] byte_data_sent;
+  reg [63:0] rBuff;
+  reg [3:0] rmsg_count;
+  
+  always @ (posedge clk) begin
+  if (byte_received) begin
+      rBuff <= {rBuff[55:0], byte_data_received};
+      rmsg_count <= rmsg_count + 1;
+    end 
+  end
+
+  always @(posedge clk) 
+  begin
+    if (rmsg_count == 8) begin
+      SPI_DATA_OUT <= rBuff;
+      sBuff <= SPI_DATA_IN;
+      rmsg_count <= 0;
+    end
+    
+  end
+  
+  reg [63:0] sBuff;
+  reg [3:0] smsg_count;
+
+  reg [6:0] byte_data_sent;
 
   always @(posedge clk)
     if (SPI_CS_active) begin
-      if (SPI_CS_startmessage) byte_data_sent <= SPI_DATA_IN;
+      if (SPI_CS_startmessage) byte_data_sent <= sBuff[rmsg_count*8-1:rmsg_count*8-8];
       else if (SPI_CLK_fallingedge) begin
-        if (bitcnt == 0) byte_data_sent <= 0;
-        else byte_data_sent <= {byte_data_sent[62:0], 1'b0};
+          if (bitcnt == 3'b000) byte_data_sent <= 8'h00;
+          else byte_data_sent <= {byte_data_sent[6:0], 1'b0};
       end
     end
 
-  assign SPI_POCI = byte_data_sent[63];
-
+  assign SPI_POCI = byte_data_sent[7];
+ 
 endmodule
