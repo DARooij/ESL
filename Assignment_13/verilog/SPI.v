@@ -12,12 +12,10 @@ module SPI (
     input  SPI_CLK,
     input  SPI_PICO,
     input  SPI_CS,
-    input [63:0] SPI_DATA_IN,
     output SPI_POCI,
-    output [63:0] SPI_DATA_OUT
+    output led2,
+    output led1
 );
-
-  parameter BITS_PER_MESSAGE = 64;
 
   reg [2:0] SPI_CLKr;
   always @(posedge clk) SPI_CLKr <= {SPI_CLKr[1:0], SPI_CLK};
@@ -34,46 +32,39 @@ module SPI (
   always @(posedge clk) SPI_PICOr <= {SPI_PICOr[0], SPI_PICO};
   wire SPI_PICO_data = SPI_PICOr[1];
 
-  reg [7:0] bitcnt;
+  reg [2:0] bitcnt;
   reg byte_received;
-  reg [BITS_PER_MESSAGE-1:0] byte_data_received;
+  reg [7:0] byte_data_received = 0;
 
   always @(posedge clk) begin
-    if (~SPI_CS_active) bitcnt <= 0;
+    if (~SPI_CS_active) bitcnt <= 3'b000;
     else if (SPI_CLK_risingedge) begin
-      bitcnt <= bitcnt + 1;
-      byte_data_received <= {byte_data_received[BITS_PER_MESSAGE-2:0], SPI_PICO_data};
+      bitcnt <= bitcnt + 3'b001;
+      byte_data_received <= {byte_data_received[6:0], SPI_PICO_data};
     end
   end
 
-  always @(posedge clk) byte_received <= SPI_CS_active && SPI_CLK_risingedge && (bitcnt == BITS_PER_MESSAGE-1);
+  always @(posedge clk) byte_received <= SPI_CS_active && SPI_CLK_risingedge && (bitcnt == 3'b111);
 
-  // store the last fully received 64-bit word
-  reg [BITS_PER_MESSAGE-1:0] last_received;
-  // buffer used to drive outgoing data during the next transaction
-  reg [BITS_PER_MESSAGE-1:0] send_buffer;
+  reg led2;
+  always @(posedge clk) if (byte_received) led2 <= byte_data_received[0];
 
-  always @(posedge clk) if (byte_received) last_received <= byte_data_received;
-  // expose the most recently received word on the output port
-  assign SPI_DATA_OUT = last_received;
+  reg [7:0] byte_data_sent;
+  reg [7:0] cnt = 0;
+  always @(posedge clk) if (byte_received) cnt <= byte_data_received + 8'h1;
 
-  reg [BITS_PER_MESSAGE-1:0] byte_data_sent;
- 
-  always @(posedge clk) begin
-    if (~SPI_CS_active)
-      byte_data_sent <= 0;
-    else if (SPI_CS_startmessage)
-      // load the previously received word to transmit back this transaction
-      byte_data_sent <= send_buffer;
-    else if (SPI_CLK_fallingedge)
-      byte_data_sent <= {byte_data_sent[BITS_PER_MESSAGE-2:0], 1'b0};
-  end
+  reg led1 = 0;
+  always @(posedge clk) if (byte_received && (byte_data_received == 8'hFF)) led1 <= ~led1;
 
-  // update the send buffer at the end of a CS (so the received word is returned next transaction)
   always @(posedge clk)
-    if (SPI_CS_endmessage)
-      send_buffer <= last_received;
+    if (SPI_CS_active) begin
+      if (SPI_CS_startmessage) byte_data_sent <= cnt;
+      else if (SPI_CLK_fallingedge) begin
+        if (bitcnt == 3'b000) byte_data_sent <= 8'h00;
+        else byte_data_sent <= {byte_data_sent[6:0], 1'b0};
+      end
+    end
 
-  assign SPI_POCI = byte_data_sent[BITS_PER_MESSAGE-1];
- 
+  assign SPI_POCI = byte_data_sent[7];
+
 endmodule

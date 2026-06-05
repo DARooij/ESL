@@ -63,6 +63,7 @@ module tb_SPI;
     $display("After first transaction: SPI_DATA_OUT = %016h", SPI_DATA_OUT);
 
     send_spi_transaction(64'hFEDC_BA98_7654_3210, rx2);
+    #200000
     $display("After second transaction: SPI_DATA_OUT = %016h", SPI_DATA_OUT);
     $display("Sampled SPI_POCI during second transaction = %016h", rx2);
 
