@@ -24,15 +24,21 @@
 #include <stdio.h>
 #include <cstdint>
 #include <string.h>
+#include <time.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 /* 20-sim submodel class include file */
 #include "Pancpp/PositionControllerPan.h"
 #include "Tiltcpp/PositionControllerTilt.h"
-#include "FPGA_Interface.hpp"
+#include "soc_system.h"
 
 #define SPI_CHANNEL 1
 #define SPI_SPEED 1000000
 #define SPI_FLAGS 0
+
+#define TIME_STEP_MS 10
 
 #define TILTCONST 681/2.62
 #define PANCONST 681/2.62
@@ -40,8 +46,20 @@
 /* the main function */
 int main()
 {
-	char RXBuf[8]; 
-	int spi = FPGAInterface::spiOpen(SPI_CHANNEL, SPI_SPEED, SPI_FLAGS);
+	int fd = 0;
+
+	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (fd < 0) {
+		perror("Couldn't open /dev/mem\n");
+		return -1;
+	}
+	uint8_t* esl_demo_map = NULL;
+	esl_demo_map = (uint8_t*)mmap(NULL, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_TOPENTITY_0_BASE);
+	if (esl_demo_map == MAP_FAILED) {
+		perror("Couldn't map bridge.");
+		close(fd);
+		return -1;
+	}
 
 	XXDouble ut [3 + 1];
 	XXDouble yt [1 + 1];
@@ -72,51 +90,62 @@ int main()
 	printf("Time pan: %f\n", panController.GetTime() );
 	printf("Time tilt: %f\n", tiltController.GetTime() );
 
+	int nextTime = clock() + TIME_STEP_MS;
+
 	/* simple loop, the time is incremented by the integration method */
 	while (panController.state != PositionControllerPan::finished && tiltController.state != PositionControllerTilt::finished)
 	{
-		FPGAInterface::spiRead(spi, SPI_SPEED, RXBuf, 8);
+		// Read encoder values
+		uint32_t encoderValues = *((uint32_t *)esl_demo_map);
+		uint16_t panEncoderValue = *((uint16_t *)esl_demo_map);
+		uint16_t tiltEncoderValue = (uint16_t)(encoderValues << 16);
+		printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
 
-		uint32_t panEncoderValue;
-		uint32_t tiltEncoderValue;
-		memcpy(&panEncoderValue, &RXBuf[0], sizeof(uint32_t));
-		memcpy(&tiltEncoderValue, &RXBuf[4], sizeof(uint32_t));
+		XXDouble panPosition = panEncoderValue / PANCONST;
+		XXDouble tiltPosition = tiltEncoderValue / TILTCONST;
+		if (clock() >= nextTime) {
 
-		XXDouble panPosition = panEncoderValue / 0;
-		XXDouble tiltPosition = tiltEncoderValue / 0;
+			/* call the submodel to calculate the output */
+			up[1] = (XXDouble)panPosition;	// panPosition is the position value from the pan encoder
+			ut[2] = (XXDouble)tiltPosition; // tiltPosition is the position value from the tilt encoder
+			panController.Calculate(up, yp);
+			ut[0] = yp[0];
+			tiltController.Calculate(ut, yt);
 
-		/* call the submodel to calculate the output */
-		up[1] = (XXDouble) panPosition; // panPosition is the position value from the pan encoder
-		ut[2] = (XXDouble) tiltPosition; // tiltPosition is the position value from the tilt encoder
-		panController.Calculate (up, yp);
-        ut[0] = yp[0];
-        tiltController.Calculate (ut, yt);
+			uint16_t panControlSignal;
+			if (yp[1] > 0)
+			{
+				panControlSignal = 1 << 8 | ((uint8_t)yp[1] * 100);
+			}
+			else if (yp[1] < 0)
+			{
+				panControlSignal = 0 << 8 | ((uint8_t)(-yp[1]) * 100);
+			}
+			else
+			{
+				panControlSignal = 0;
+			}
 
-		uint32_t panControlSignal;
-		if (yp[1] > 0) {
-			panControlSignal = 1 << 8 | ((uint8_t) yp[1] * 100);
-		} else if (yp[1] < 0) {
-			panControlSignal = 0 << 8 | ((uint8_t) (-yp[1]) * 100);
-		} else {
-			panControlSignal = 0;
+			uint16_t tiltControlSignal;
+			if (yt[0] > 0)
+			{
+				tiltControlSignal = 1 << 8 | ((uint8_t)yt[0] * 100);
+			}
+			else if (yt[0] < 0)
+			{
+				tiltControlSignal = 0 << 8 | ((uint8_t)(-yt[0]) * 100);
+			}
+			else
+			{
+				tiltControlSignal = 0;
+			}
+
+			*((uint32_t *)esl_demo_map) = (tiltControlSignal << 16) | panControlSignal;
+
+			printf("Time pan: %f\n", panController.GetTime());
+			printf("Time tilt: %f\n", tiltController.GetTime());
+			nextTime += TIME_STEP_MS;
 		}
-
-		uint32_t tiltControlSignal;
-		if (yt[0] > 0) {
-			tiltControlSignal = 1 << 8 | ((uint8_t) yt[0] * 100);
-		} else if (yt[0] < 0) {
-			tiltControlSignal = 0 << 8 | ((uint8_t) (-yt[0]) * 100);
-		} else {
-			tiltControlSignal = 0;
-		}
-
-		char TXBuf[8];
-		memcpy(&TXBuf[0], &panControlSignal, sizeof(uint32_t));
-		memcpy(&TXBuf[4], &tiltControlSignal, sizeof(uint32_t));
-
-		FPGAInterface::spiWrite(spi, SPI_SPEED, TXBuf, 8);
-		printf("Time pan: %f\n", panController.GetTime() );
-        printf("Time tilt: %f\n", tiltController.GetTime() );
 
 	}
 
