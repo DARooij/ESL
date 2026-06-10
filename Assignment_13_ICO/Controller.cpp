@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 /* 20-sim submodel class include file */
 #include "Pancpp/PositionControllerPan.h"
@@ -35,6 +36,8 @@
 #define SPI_SPEED 1000000
 #define SPI_FLAGS 0
 
+#define DIRECTION_BIT_OFFSET 8
+
 #define TILTCONST 681/2.62
 #define PANCONST 681/2.62
 
@@ -44,6 +47,7 @@
 int main()
 {
 	char RXBuf[8]; 
+	char TXBuf[8];
 	int spi = FPGAInterface::spiOpen(SPI_CHANNEL, SPI_SPEED, SPI_FLAGS);
 
 	XXDouble ut [3 + 1];
@@ -53,15 +57,33 @@ int main()
 	XXDouble u [2 + 1];
 	XXDouble y [2 + 1];
 
+	uint16_t panEncoderValue = 0;
+	uint16_t tiltEncoderValue = 0;
+	XXDouble panPosition = 0;
+	XXDouble tiltPosition = 0;
+
+
+	uint32_t homingControlSignal = ((1 << DIRECTION_BIT_OFFSET) | (25 << 16)) | ((1 << DIRECTION_BIT_OFFSET) | 25);
+	memcpy(&TXBuf[0], &homingControlSignal, sizeof(uint32_t));
+	FPGAInterface::spiWrite(spi, SPI_SPEED, TXBuf, 8);
+	sleep(3);
+
+	FPGAInterface::spiRead(spi, SPI_SPEED, RXBuf, 8);
+	memcpy(&panEncoderValue, &RXBuf[0], sizeof(uint16_t));
+	memcpy(&tiltEncoderValue, &RXBuf[2], sizeof(uint16_t));
+	panPosition = panEncoderValue / PANCONST;
+	tiltPosition = tiltEncoderValue / TILTCONST;
+
+
 	/* initialize the inputs and outputs with correct initial values */
 	ut[0] = 0.0;		/* corr */
-	ut[1] = 0.0;		/* in */
-	ut[2] = 0.0;		/* position */
+	ut[1] = tiltPosition;		/* in */
+	ut[2] = tiltPosition;		/* position */
 
 	yt[0] = 0.0;		/* out */
 
-    up[0] = 0.0;		/* in */
-	up[1] = 0.0;		/* position */
+    up[0] = panPosition;		/* in */
+	up[1] = panPosition;		/* position */
 
 	yp[0] = 0.0;		/* corr */
 	yp[1] = 0.0;		/* out */
@@ -82,10 +104,8 @@ int main()
 	{
 		FPGAInterface::spiRead(spi, SPI_SPEED, RXBuf, 8);
 
-		uint32_t panEncoderValue;
-		uint32_t tiltEncoderValue;
-		memcpy(&panEncoderValue, &RXBuf[0], sizeof(uint32_t));
-		memcpy(&tiltEncoderValue, &RXBuf[4], sizeof(uint32_t));
+		memcpy(&panEncoderValue, &RXBuf[0], sizeof(uint16_t));
+		memcpy(&tiltEncoderValue, &RXBuf[2], sizeof(uint16_t));
 
 		XXDouble panPosition = panEncoderValue / PANCONST;
 		XXDouble tiltPosition = tiltEncoderValue / TILTCONST;
@@ -127,9 +147,8 @@ int main()
 				tiltControlSignal = 0;
 			}
 
-			char TXBuf[8];
-			memcpy(&TXBuf[0], &panControlSignal, sizeof(uint32_t));
-			memcpy(&TXBuf[4], &tiltControlSignal, sizeof(uint32_t));
+			memcpy(&TXBuf[0], &panControlSignal, sizeof(uint16_t));
+			memcpy(&TXBuf[2], &tiltControlSignal, sizeof(uint16_t));
 
 			FPGAInterface::spiWrite(spi, SPI_SPEED, TXBuf, 8);
 			printf("Time pan: %f\n", panController.GetTime());
