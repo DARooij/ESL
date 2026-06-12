@@ -1,7 +1,7 @@
 //
 // Authors: D. Gaethofs, D.A. Rooijackers
 // Title: Assignment 4 
-// Brief: 
+// Brief: Quadrature Decoder 
 //
 
 module quad_decod(

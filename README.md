@@ -29,3 +29,25 @@ Interesting points of measurement:
 Raspberry PI vs DE10;
 - Raspberry PI is easier in use case, the avalon bus of the DE10 is quite finicky to work with and can be hard to debug
 - Raspberry Pi is more common in use, more people have experience with this, which makes it easier to use for people not super familiar with the project
+
+## Assignment 15
+
+Structure of the report:
+1. DSE
+    Tables we want to do: 
+    - Slide 23 table/weighted
+    - Raspberry Pi vs DE10
+    - Slide 25 table
+2. Realization
+    - Redo and document experiments
+    - More testbenches?
+    - Clean up code
+        * Add comments
+        * Add headers
+        * README cleanup 
+3. Evaluation
+
+In around 15-25 pages
+
+## Questions to ask
+1. 
