@@ -30,8 +30,7 @@
 #include <unistd.h>
 
 /* 20-sim submodel class include file */
-#include "Pancpp/PositionControllerPan.h"
-#include "Tiltcpp/PositionControllerTilt.h"
+#include "FullController/FullController.h"
 #include "soc_system.h"
 
 #define SPI_CHANNEL 1
@@ -42,8 +41,8 @@
 
 #define TIME_STEP_MS 10
 
-#define TILTCONST 681/2.62
-#define PANCONST 681/2.62
+#define TILTCONST 681 / 2.62
+#define PANCONST 681 / 2.62
 
 /* the main function */
 int main()
@@ -51,97 +50,86 @@ int main()
 	int fd = 0;
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (fd < 0) {
+	if (fd < 0)
+	{
 		perror("Couldn't open /dev/mem\n");
 		return -1;
 	}
-	uint8_t* esl_demo_map = NULL;
-	esl_demo_map = (uint8_t*)mmap(NULL, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_TOPENTITY_0_BASE);
-	if (esl_demo_map == MAP_FAILED) {
+	uint8_t *esl_demo_map = NULL;
+	esl_demo_map = (uint8_t *)mmap(NULL, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_TOPENTITY_0_BASE);
+	if (esl_demo_map == MAP_FAILED)
+	{
 		perror("Couldn't map bridge.");
 		close(fd);
 		return -1;
 	}
 
-	XXDouble ut [3 + 1];
-	XXDouble yt [1 + 1];
-    XXDouble up [2 + 1];
-    XXDouble yp [2 + 1];
-	XXDouble u [2 + 1];
-	XXDouble y [2 + 1];
-	
+	XXDouble u[4 + 1];
+	XXDouble y[2 + 1];
+
 	uint32_t encoderValues = 0;
 	uint16_t panEncoderValue = 0;
 	uint16_t tiltEncoderValue = 0;
 	XXDouble panPosition = 0.0;
 	XXDouble tiltPosition = 0.0;
 
-
 	// Homing procedure, move at 25% speed in one direction
-	*((uint32_t *)esl_demo_map) = ((1 << DIRECTION_BIT_OFFSET) | (25 << 16)) | ((1 << DIRECTION_BIT_OFFSET) | 25);
+	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 16 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
 	sleep(3);
 	*((uint32_t *)esl_demo_map) = 0;
 	// We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
-	usleep(30); 
+	usleep(30);
 	encoderValues = *((uint32_t *)esl_demo_map);
 	panEncoderValue = *((uint16_t *)esl_demo_map);
 	tiltEncoderValue = (uint16_t)(encoderValues << 16);
 
 	panPosition = panEncoderValue / PANCONST;
 	tiltPosition = tiltEncoderValue / TILTCONST;
-	
+
 	/* initialize the inputs and outputs with correct initial values */
-	ut[0] = 0.0;		/* corr */
-	ut[1] = tiltPosition;		/* in */
-	ut[2] = tiltPosition;		/* position */
+	u[0] = panPosition;	 /* PosPan */
+	u[1] = tiltPosition; /* PosTilt */
+	u[2] = panPosition;	 /* RefPan */
+	u[3] = tiltPosition; /* RefTilt */
 
-	yt[0] = 0.0;		/* out */
+	y[0] = 0.0; /* OutPan */
+	y[1] = 0.0; /* OutTilt */
 
-    up[0] = panPosition;		/* in */
-	up[1] = panPosition;		/* position */
-
-	yp[0] = 0.0;		/* corr */
-	yp[1] = 0.0;		/* out */
-
-	PositionControllerPan panController;
-    PositionControllerTilt tiltController;
+	FullController my20simSubmodel;
 
 	/* initialize the submodel itself and calculate the outputs for t=0.0 */
-	panController.Initialize(up, yp, 0.0);
-    tiltController.Initialize(ut, yt, 0.0);
-	printf("Time pan: %f\n", panController.GetTime() );
-	printf("Time tilt: %f\n", tiltController.GetTime() );
+	my20simSubmodel.Initialize(u, y, 0.0);
+	printf("Time: %f\n", my20simSubmodel.GetTime());
 
 	int nextTime = clock() + TIME_STEP_MS;
 
 	/* simple loop, the time is incremented by the integration method */
-	while (panController.state != PositionControllerPan::finished && tiltController.state != PositionControllerTilt::finished)
+	while (my20simSubmodel.state != FullController::finished)
 	{
 		// Read encoder values
 		encoderValues = *((uint32_t *)esl_demo_map);
 		panEncoderValue = *((uint16_t *)esl_demo_map);
-		tiltEncoderValue = (uint16_t)(encoderValues << 16);
+		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 		printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
 
 		panPosition = panEncoderValue / PANCONST;
 		tiltPosition = tiltEncoderValue / TILTCONST;
-		if (clock() >= nextTime) {
+		if (clock() >= nextTime)
+		{
 
 			/* call the submodel to calculate the output */
-			up[1] = (XXDouble)panPosition;	// panPosition is the position value from the pan encoder
-			ut[2] = (XXDouble)tiltPosition; // tiltPosition is the position value from the tilt encoder
-			panController.Calculate(up, yp);
-			ut[0] = yp[0];
-			tiltController.Calculate(ut, yt);
+			u[0] = (XXDouble)panPosition;  // panPosition is the position value from the pan encoder
+			u[1] = (XXDouble)tiltPosition; // tiltPosition is the position value from the tilt encoder
+			my20simSubmodel.Calculate(u, y);
 
 			uint16_t panControlSignal;
-			if (yp[1] > 0)
+			if (y[0] > 0)
 			{
-				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)yp[1] * 100);
+				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)y[0] * 100);
 			}
-			else if (yp[1] < 0)
+			else if (y[1] < 0)
 			{
-				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-yp[1]) * 100);
+				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-y[1]) * 100);
 			}
 			else
 			{
@@ -149,13 +137,13 @@ int main()
 			}
 
 			uint16_t tiltControlSignal;
-			if (yt[0] > 0)
+			if (y[1] > 0)
 			{
-				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)yt[0] * 100);
+				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)y[1] * 100);
 			}
-			else if (yt[0] < 0)
+			else if (y[0] < 0)
 			{
-				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-yt[0]) * 100);
+				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-y[0]) * 100);
 			}
 			else
 			{
@@ -164,18 +152,17 @@ int main()
 
 			*((uint32_t *)esl_demo_map) = (tiltControlSignal << 16) | panControlSignal;
 
-			printf("Time pan: %f\n", panController.GetTime());
-			printf("Time tilt: %f\n", tiltController.GetTime());
+			printf("Time: %f\n", my20simSubmodel.GetTime());
 			nextTime += TIME_STEP_MS;
 		}
-
 	}
 
 	/* perform the final calculations */
-	panController.Terminate (up, yp);
-    tiltController.Terminate (ut, yt);
+	my20simSubmodel.Terminate(u, y);
+
+	munmap(esl_demo_map, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN);
+	close(fd);
 
 	/* and we are done */
 	return 0;
 }
-
