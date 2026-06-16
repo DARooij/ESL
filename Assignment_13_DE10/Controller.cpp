@@ -39,7 +39,7 @@
 
 #define DIRECTION_BIT_OFFSET 8
 
-#define TIME_STEP_MS 10
+#define TIME_STEP_MICROS 10000
 
 #define TILTCONST 681 / 2.62
 #define PANCONST 681 / 2.62
@@ -101,7 +101,7 @@ int main()
 	my20simSubmodel.Initialize(u, y, 0.0);
 	printf("Time: %f\n", my20simSubmodel.GetTime());
 
-	int nextTime = clock() + TIME_STEP_MS;
+	int nextTime = clock() + TIME_STEP_MICROS;
 
 	/* simple loop, the time is incremented by the integration method */
 	while (my20simSubmodel.state != FullController::finished)
@@ -110,12 +110,14 @@ int main()
 		encoderValues = *((uint32_t *)esl_demo_map);
 		panEncoderValue = *((uint16_t *)esl_demo_map);
 		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
-		printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
 
 		panPosition = panEncoderValue / PANCONST;
 		tiltPosition = tiltEncoderValue / TILTCONST;
 		if (clock() >= nextTime)
 		{
+			nextTime = clock() + TIME_STEP_MICROS;
+			printf("Clock and nextTime: %ld, %ld\n", clock(), nextTime);
+			printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
 
 			/* call the submodel to calculate the output */
 			u[0] = (XXDouble)panPosition;  // panPosition is the position value from the pan encoder
@@ -153,7 +155,6 @@ int main()
 			*((uint32_t *)esl_demo_map) = (tiltControlSignal << 16) | panControlSignal;
 
 			printf("Time: %f\n", my20simSubmodel.GetTime());
-			nextTime += TIME_STEP_MS;
 		}
 	}
 
