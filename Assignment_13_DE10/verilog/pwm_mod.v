@@ -3,7 +3,7 @@ module pwm_mod (
     input clk,
     input rst,
     input [7:0] duty_cycle,
-    input [1:0] direction,
+    input direction,
     output wire directionA,
     output wire directionB,
     output wire pwm_out
@@ -53,7 +53,7 @@ end
 
 assign pwm_out = pwm_reg;
 
-assign directionA = direction[1];
-assign directionB = direction[0];
+assign directionA = direction;
+assign directionB = ~direction;
 
 endmodule

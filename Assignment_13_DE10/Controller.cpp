@@ -17,7 +17,7 @@
  * the submodel and the integration method.
  *
  * PLEASE NOTE: THIS IS AN EXAMPLE WHERE ALL INPUTS ARE ZERO !
- * USE YOUR OWN INPUTS INSTEAD!! ALSO THE SUBMODEL MIGHT SIMPLY
+ * USE YOUR OWN INusleepPUTS INSTEAD!! ALSO THE SUBMODEL MIGHT SIMPLY
  * NOT WORK CORRECTLY WITH INPUTS THAT ARE ZERO.
  */
 
@@ -33,16 +33,14 @@
 #include "FullController/FullController.h"
 #include "soc_system.h"
 
-#define SPI_CHANNEL 1
-#define SPI_SPEED 1000000
-#define SPI_FLAGS 0
-
 #define DIRECTION_BIT_OFFSET 8
 
 #define TIME_STEP_MICROS 10000
+#define MAX_PWM_VALUE 50
+#define TILT_PWM_VALUE_OFFSET 9
 
-#define TILTCONST 681 / 2.62
-#define PANCONST 681 / 2.62
+#define TILTCONST 1.57 / 9856
+#define PANCONST 1.57 / 10852 
 
 /* the main function */
 int main()
@@ -74,23 +72,23 @@ int main()
 	XXDouble tiltPosition = 0.0;
 
 	// Homing procedure, move at 25% speed in one direction
-	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 16 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
-	sleep(3);
-	*((uint32_t *)esl_demo_map) = 0;
-	// We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
-	usleep(30);
+	// *((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 9 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
+	// sleep(3);
+	// *((uint32_t *)esl_demo_map) = 0;
+	// // We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
+	// usleep(30);
 	encoderValues = *((uint32_t *)esl_demo_map);
 	panEncoderValue = *((uint16_t *)esl_demo_map);
 	tiltEncoderValue = (uint16_t)(encoderValues << 16);
 
-	panPosition = panEncoderValue / PANCONST;
-	tiltPosition = tiltEncoderValue / TILTCONST;
+	panPosition = panEncoderValue * PANCONST;
+	tiltPosition = tiltEncoderValue * TILTCONST;
 
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
 	u[1] = tiltPosition; /* PosTilt */
-	u[2] = panPosition;	 /* RefPan */
-	u[3] = tiltPosition; /* RefTilt */
+	u[2] = 0.0;	 /* RefPan */
+	u[3] = 0.0; /* RefTilt */
 
 	y[0] = 0.0; /* OutPan */
 	y[1] = 0.0; /* OutTilt */
@@ -99,9 +97,14 @@ int main()
 
 	/* initialize the submodel itself and calculate the outputs for t=0.0 */
 	my20simSubmodel.Initialize(u, y, 0.0);
+	my20simSubmodel.SetFinishTime(0.0); /* set the finish time to infinite, so the model will run until we stop it */
+	
 	printf("Time: %f\n", my20simSubmodel.GetTime());
 
 	int nextTime = clock() + TIME_STEP_MICROS;
+
+	uint16_t tiltControlSignal;
+	uint16_t panControlSignal;
 
 	/* simple loop, the time is incremented by the integration method */
 	while (my20simSubmodel.state != FullController::finished)
@@ -116,46 +119,48 @@ int main()
 		if (clock() >= nextTime)
 		{
 			nextTime = clock() + TIME_STEP_MICROS;
-			printf("Clock and nextTime: %ld, %ld\n", clock(), nextTime);
-			printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
+			// printf("Clock and nextTime: %ld, %ld\n", clock(), nextTime);
+			// printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
+			printf("Positions: pan = %f, tilt = %f\n", panPosition, tiltPosition);
 
 			/* call the submodel to calculate the output */
-			u[0] = (XXDouble)panPosition;  // panPosition is the position value from the pan encoder
-			u[1] = (XXDouble)tiltPosition; // tiltPosition is the position value from the tilt encoder
+			u[0] = panPosition;  // panPosition is the position value from the pan encoder
+			u[1] = tiltPosition; // tiltPosition is the position value from the tilt encoder
 			my20simSubmodel.Calculate(u, y);
 
-			uint16_t panControlSignal;
+			// printf("Outputs: pan = %f, tilt = %f\n", y[0], y[1]);
 			if (y[0] > 0)
 			{
-				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)y[0] * 100);
+				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[0] * MAX_PWM_VALUE));
 			}
 			else if (y[1] < 0)
 			{
-				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-y[1]) * 100);
+				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[1]) * MAX_PWM_VALUE));
 			}
 			else
 			{
 				panControlSignal = 0;
 			}
 
-			uint16_t tiltControlSignal;
 			if (y[1] > 0)
 			{
-				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)y[1] * 100);
+				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[1] * MAX_PWM_VALUE));
 			}
 			else if (y[0] < 0)
 			{
-				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)(-y[0]) * 100);
+				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[0]) * MAX_PWM_VALUE));
 			}
 			else
 			{
 				tiltControlSignal = 0;
 			}
+			printf("Control signals: pan = %d, tilt = %d\n", panControlSignal, tiltControlSignal);
 
-			*((uint32_t *)esl_demo_map) = (tiltControlSignal << 16) | panControlSignal;
 
 			printf("Time: %f\n", my20simSubmodel.GetTime());
 		}
+
+		*((uint32_t *)esl_demo_map) = (tiltControlSignal << TILT_PWM_VALUE_OFFSET) | panControlSignal;
 	}
 
 	/* perform the final calculations */

@@ -81,6 +81,8 @@ pwm_mod pitch_pwm(
             slave_readdata <= 32'b0;
             yaw_duty_cycle_input <= 8'b0;
             yaw_direction_input <= 1'b0;
+            pitch_duty_cycle_input <= 8'b0;
+            pitch_direction_input <= 1'b0;
         end else begin 
             if (slave_read) begin
                 slave_readdata <= {pitch_encoder_value, yaw_encoder_value};

@@ -49,4 +49,4 @@ module pwm_mod_demo #(
     end
 
 
-endmodule
+endmodule				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[1]) * MAX_PWM_VALUE));

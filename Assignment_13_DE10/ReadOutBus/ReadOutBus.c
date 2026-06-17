@@ -44,6 +44,9 @@ int main(int argc, char** argv) {
 
         printf("Pitch: 0x%04X (%5u) | Yaw: 0x%04X (%5u)\n", 
                pitch_val, pitch_val, yaw_val, yaw_val);
+
+        *((uint32_t *)fpga_avalon_map) = (1 << 8) | 10; 
+        printf("Sent command to FPGA: 0x%08X\n", (1 << 8) | 10);
                
         usleep(100000); // 100 ms delay
     }

@@ -123,36 +123,36 @@ add_interface_port PITCH_ENCODER_A PITCH_ENC_A export Input 1
 add_interface PITCH_ENCODER_B conduit end
 add_interface_port PITCH_ENCODER_B PITCH_ENC_B export Input 1
 add_interface PWM_PITCH_DIRA conduit end
-add_interface_port PWM_PITCH_DIRA PITCH_DIRA export Input 1
+add_interface_port PWM_PITCH_DIRA PITCH_DIRA export Output 1
 add_interface PWM_PITCH_DIRB conduit end
-add_interface_port PWM_PITCH_DIRB PITCH_DIRB export Input 1
+add_interface_port PWM_PITCH_DIRB PITCH_DIRB export Output 1
 add_interface PWM_PITCH_VAL conduit end
-add_interface_port PWM_PITCH_VAL PITCH_PWM_VAL export Input 1
+add_interface_port PWM_PITCH_VAL PITCH_PWM_VAL export Output 1
 
 add_interface YAW_ENCODER_A conduit end
 add_interface_port YAW_ENCODER_A YAW_ENC_A export Input 1
 add_interface YAW_ENCODER_B conduit end
 add_interface_port YAW_ENCODER_B YAW_ENC_B export Input 1
 add_interface PWM_YAW_DIRA conduit end
-add_interface_port PWM_YAW_DIRA YAW_DIRA export Input 1
+add_interface_port PWM_YAW_DIRA YAW_DIRA export Output 1
 add_interface PWM_YAW_DIRB conduit end
-add_interface_port PWM_YAW_DIRB YAW_DIRB export Input 1
+add_interface_port PWM_YAW_DIRB YAW_DIRB export Output 1
 add_interface PWM_YAW_VAL conduit end
-add_interface_port PWM_YAW_VAL YAW_PWM_VAL export Input 1
+add_interface_port PWM_YAW_VAL YAW_PWM_VAL export Output 1
 
-add_interface PITCH_PWM conduit end
-add_interface_port PITCH_PWM PITCH_PWM_VAL export Output 1
-add_interface PITCH_DIRECTION_A conduit end
-add_interface_port PITCH_DIRECTION_A PITCH_DIRA export Output 1
-add_interface PITCH_DIRECTION_B conduit end
-add_interface_port PITCH_DIRECTION_B PITCH_DIRB export Output 1
+# add_interface PITCH_PWM conduit end
+# add_interface_port PITCH_PWM PITCH_PWM_VAL export Output 1
+# add_interface PITCH_DIRECTION_A conduit end
+# add_interface_port PITCH_DIRECTION_A PITCH_DIRA export Output 1
+# add_interface PITCH_DIRECTION_B conduit end
+# add_interface_port PITCH_DIRECTION_B PITCH_DIRB export Output 1
 
-add_interface YAW_PWM conduit end
-add_interface_port YAW_PWM YAW_PWM_VAL export Output 1
-add_interface YAW_DIRECTION_A conduit end
-add_interface_port YAW_DIRECTION_A YAW_DIRA export Output 1
-add_interface YAW_DIRECTION_B conduit end
-add_interface_port YAW_DIRECTION_B YAW_DIRB export Output 1
+# add_interface YAW_PWM conduit end
+# add_interface_port YAW_PWM YAW_PWM_VAL export Output 1
+# add_interface YAW_DIRECTION_A conduit end
+# add_interface_port YAW_DIRECTION_A YAW_DIRA export Output 1
+# add_interface YAW_DIRECTION_B conduit end
+# add_interface_port YAW_DIRECTION_B YAW_DIRB export Output 1
 
 # add_interface leds conduit end
 # add_interface_port leds user_output export Output 1
