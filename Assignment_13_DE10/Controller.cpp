@@ -89,17 +89,19 @@ int main()
 	panEncoderValue = *((uint16_t *)esl_demo_map);
 	tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
-	panOffset = MINANGLE - panEncoderValue * PANCONST;
-	tiltOffset = MINANGLE - tiltEncoderValue * TILTCONST;
+	// Position after homing should be zero, so calculate offset to be used later
+	panOffset = panEncoderValue * PANCONST;
+	tiltOffset = tiltEncoderValue * TILTCONST;
 
-	panPosition = MINANGLE;
-	tiltPosition = MINANGLE;
+	// Should be zero after homing
+	panPosition = panEncoderValue * PANCONST - panOffset;
+	tiltPosition = tiltEncoderValue * TILTCONST - tiltOffset;
 
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
 	u[1] = tiltPosition; /* PosTilt */
-	u[2] = STATICREFERENCE;	 /* RefPan */
-	u[3] = STATICREFERENCE; /* RefTilt */
+	u[2] = panPosition;	 /* RefPan */
+	u[3] = tiltPosition; /* RefTilt */
 
 	y[0] = 0.0; /* OutPan */
 	y[1] = 0.0; /* OutTilt */
@@ -125,8 +127,8 @@ int main()
 		panEncoderValue = *((uint16_t *)esl_demo_map);
 		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
-		panPosition = panEncoderValue * PANCONST;
-		tiltPosition = tiltEncoderValue * TILTCONST;
+		panPosition = panEncoderValue * PANCONST - panOffset;
+		tiltPosition = tiltEncoderValue * TILTCONST - tiltOffset;
 
 		if (clock() >= nextTime)
 		{
@@ -158,6 +160,9 @@ int main()
 	/* perform the final calculations */
 	my20simSubmodel.Terminate(u, y);
 
+	// Turn off pwm signals
+	*((uint32_t *)esl_demo_map) = 0;
+
 	munmap(esl_demo_map, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN);
 	close(fd);
 
@@ -188,5 +193,4 @@ void PerformHomeSequence()
 	sleep(3);
 	*((uint32_t *)esl_demo_map) = 0;
 	usleep(30);
-
 }
