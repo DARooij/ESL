@@ -42,6 +42,10 @@
 #define TILTCONST 1.57 / 9856
 #define PANCONST 1.57 / 10852 
 
+#define MINANGLE 0.5
+
+#define STATICREFERENCE 1.0;
+
 /* the main function */
 int main()
 {
@@ -65,6 +69,9 @@ int main()
 	XXDouble u[4 + 1];
 	XXDouble y[2 + 1];
 
+	XXDouble panOffset = 0.0;
+	XXDouble tiltOffset = 0.0;
+
 	uint32_t encoderValues = 0;
 	uint16_t panEncoderValue = 0;
 	uint16_t tiltEncoderValue = 0;
@@ -72,23 +79,29 @@ int main()
 	XXDouble tiltPosition = 0.0;
 
 	// Homing procedure, move at 25% speed in one direction
-	// *((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 9 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
-	// sleep(3);
-	// *((uint32_t *)esl_demo_map) = 0;
-	// // We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
-	// usleep(30);
-	encoderValues = *((uint32_t *)esl_demo_map);
-	panEncoderValue = *((uint16_t *)esl_demo_map);
-	tiltEncoderValue = (uint16_t)(encoderValues << 16);
+	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 9 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
+	sleep(3);
+	*((uint32_t *)esl_demo_map) = 0;
+	// We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
+	usleep(300000);
 
-	panPosition = panEncoderValue * PANCONST;
-	tiltPosition = tiltEncoderValue * TILTCONST;
+	encoderValues = *((uint32_t *)esl_demo_map);
+	panEncoderValue = *((uint16_t *)esl_demo_map & 0xFFFF);
+	tiltEncoderValue = (uint16_t)(encoderValues >> 16);
+
+	panOffset = MINANGLE - panEncoderValue * PANCONST;
+	tiltOffset = MINANGLE - tiltEncoderValue * TILTCONST;
+
+	panPosition = MINANGLE;
+	tiltPosition = MINANGLE;
+
+
 
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
 	u[1] = tiltPosition; /* PosTilt */
-	u[2] = 0.0;	 /* RefPan */
-	u[3] = 0.0; /* RefTilt */
+	u[2] = STATICREFERENCE;	 /* RefPan */
+	u[3] = STATICREFERENCE; /* RefTilt */
 
 	y[0] = 0.0; /* OutPan */
 	y[1] = 0.0; /* OutTilt */
@@ -111,11 +124,12 @@ int main()
 	{
 		// Read encoder values
 		encoderValues = *((uint32_t *)esl_demo_map);
-		panEncoderValue = *((uint16_t *)esl_demo_map);
+		panEncoderValue = *((uint16_t *)esl_demo_map & 0xFFFF);
 		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
-		panPosition = panEncoderValue / PANCONST;
-		tiltPosition = tiltEncoderValue / TILTCONST;
+		panPosition = panEncoderValue * PANCONST;
+		tiltPosition = tiltEncoderValue * TILTCONST;
+
 		if (clock() >= nextTime)
 		{
 			nextTime = clock() + TIME_STEP_MICROS;
@@ -133,9 +147,9 @@ int main()
 			{
 				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[0] * MAX_PWM_VALUE));
 			}
-			else if (y[1] < 0)
+			else if (y[0] < 0)
 			{
-				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[1]) * MAX_PWM_VALUE));
+				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[0]) * MAX_PWM_VALUE));
 			}
 			else
 			{
@@ -146,14 +160,15 @@ int main()
 			{
 				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[1] * MAX_PWM_VALUE));
 			}
-			else if (y[0] < 0)
+			else if (y[1] < 0)
 			{
-				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[0]) * MAX_PWM_VALUE));
+				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[1]) * MAX_PWM_VALUE));
 			}
 			else
 			{
 				tiltControlSignal = 0;
 			}
+
 			printf("Control signals: pan = %d, tilt = %d\n", panControlSignal, tiltControlSignal);
 
 
