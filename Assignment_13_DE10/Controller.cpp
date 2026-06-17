@@ -184,7 +184,7 @@ uint16_t ConvertControlSignal(XXDouble value)
 void PerformHomeSequence() 
 {
 	// Homing procedure, move at 25% speed in one direction
-	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 16 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
+	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << TILT_PWM_VALUE_OFFSET) | ((1 << DIRECTION_BIT_OFFSET) | 10);
 	sleep(3);
 	*((uint32_t *)esl_demo_map) = 0;
 	usleep(30);
