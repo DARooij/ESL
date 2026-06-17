@@ -46,6 +46,12 @@
 
 #define STATICREFERENCE 1.0;
 
+// Function prototypes
+uint16_t ConvertControlSignal(XXDouble value);
+void PerformHomeSequence();
+ 
+uint8_t *esl_demo_map = NULL;
+
 /* the main function */
 int main()
 {
@@ -57,7 +63,6 @@ int main()
 		perror("Couldn't open /dev/mem\n");
 		return -1;
 	}
-	uint8_t *esl_demo_map = NULL;
 	esl_demo_map = (uint8_t *)mmap(NULL, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, HPS_0_ARM_A9_0_TOPENTITY_0_BASE);
 	if (esl_demo_map == MAP_FAILED)
 	{
@@ -78,15 +83,10 @@ int main()
 	XXDouble panPosition = 0.0;
 	XXDouble tiltPosition = 0.0;
 
-	// Homing procedure, move at 25% speed in one direction
-	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 9 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
-	sleep(3);
-	*((uint32_t *)esl_demo_map) = 0;
-	// We don't actually understand how the avalon bus switches between read and write so we just wait 30 ms
-	usleep(300000);
 
+	PerformHomeSequence();
 	encoderValues = *((uint32_t *)esl_demo_map);
-	panEncoderValue = *((uint16_t *)esl_demo_map & 0xFFFF);
+	panEncoderValue = *((uint16_t *)esl_demo_map);
 	tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
 	panOffset = MINANGLE - panEncoderValue * PANCONST;
@@ -94,8 +94,6 @@ int main()
 
 	panPosition = MINANGLE;
 	tiltPosition = MINANGLE;
-
-
 
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
@@ -124,7 +122,7 @@ int main()
 	{
 		// Read encoder values
 		encoderValues = *((uint32_t *)esl_demo_map);
-		panEncoderValue = *((uint16_t *)esl_demo_map & 0xFFFF);
+		panEncoderValue = *((uint16_t *)esl_demo_map);
 		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
 		panPosition = panEncoderValue * PANCONST;
@@ -142,32 +140,11 @@ int main()
 			u[1] = tiltPosition; // tiltPosition is the position value from the tilt encoder
 			my20simSubmodel.Calculate(u, y);
 
-			// printf("Outputs: pan = %f, tilt = %f\n", y[0], y[1]);
-			if (y[0] > 0)
-			{
-				panControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[0] * MAX_PWM_VALUE));
-			}
-			else if (y[0] < 0)
-			{
-				panControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[0]) * MAX_PWM_VALUE));
-			}
-			else
-			{
-				panControlSignal = 0;
-			}
+			uint16_t panControlSignal;
+			panControlSignal = ConvertControlSignal(y[0]);
 
-			if (y[1] > 0)
-			{
-				tiltControlSignal = 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(y[1] * MAX_PWM_VALUE));
-			}
-			else if (y[1] < 0)
-			{
-				tiltControlSignal = 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-y[1]) * MAX_PWM_VALUE));
-			}
-			else
-			{
-				tiltControlSignal = 0;
-			}
+			uint16_t tiltControlSignal;
+			tiltControlSignal = ConvertControlSignal(y[1]);
 
 			printf("Control signals: pan = %d, tilt = %d\n", panControlSignal, tiltControlSignal);
 
@@ -186,4 +163,30 @@ int main()
 
 	/* and we are done */
 	return 0;
+}
+
+uint16_t ConvertControlSignal(XXDouble value)
+{
+	if (value > 0)
+	{
+		return 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(value * 100));
+	}
+	else if (value < 0)
+	{
+		return 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-value) * 100));
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+void PerformHomeSequence() 
+{
+	// Homing procedure, move at 25% speed in one direction
+	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << 16 ) | ((1 << DIRECTION_BIT_OFFSET) | 10);
+	sleep(3);
+	*((uint32_t *)esl_demo_map) = 0;
+	usleep(30);
+
 }
