@@ -36,15 +36,16 @@
 #define DIRECTION_BIT_OFFSET 8
 
 #define TIME_STEP_MICROS 10000
-#define MAX_PWM_VALUE 50
+#define MAX_PWM_VALUE 20
 #define TILT_PWM_VALUE_OFFSET 9
 
-#define TILTCONST 1.57 / 9856
-#define PANCONST 1.57 / 10852 
+#define TILTCONST 3.14 / 9856
+#define PANCONST 3.14 / 10852 
 
-#define MINANGLE 0.5
+#define RAWSLACK 100
 
-#define STATICREFERENCE 1.0;
+#define PANSTATICREFERENCE 1.5
+#define TILTSTATICREFERENCE 3.0 
 
 // Function prototypes
 uint16_t ConvertControlSignal(XXDouble value);
@@ -74,8 +75,8 @@ int main()
 	XXDouble u[4 + 1];
 	XXDouble y[2 + 1];
 
-	XXDouble panOffset = 0.0;
-	XXDouble tiltOffset = 0.0;
+	uint16_t panOffset = 0;
+	uint16_t tiltOffset = 0;
 
 	uint32_t encoderValues = 0;
 	uint16_t panEncoderValue = 0;
@@ -83,23 +84,22 @@ int main()
 	XXDouble panPosition = 0.0;
 	XXDouble tiltPosition = 0.0;
 
-
 	PerformHomeSequence();
 	encoderValues = *((uint32_t *)esl_demo_map);
 	panEncoderValue = *((uint16_t *)esl_demo_map);
 	tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
-	panOffset = MINANGLE - panEncoderValue * PANCONST;
-	tiltOffset = MINANGLE - tiltEncoderValue * TILTCONST;
+	panOffset = panEncoderValue - RAWSLACK;
+	tiltOffset = tiltEncoderValue - RAWSLACK;
 
-	panPosition = MINANGLE;
-	tiltPosition = MINANGLE;
+	panPosition = (panEncoderValue + RAWSLACK - panOffset) * PANCONST;
+	tiltPosition = (tiltEncoderValue + RAWSLACK - tiltOffset) * TILTCONST;
 
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
 	u[1] = tiltPosition; /* PosTilt */
-	u[2] = STATICREFERENCE;	 /* RefPan */
-	u[3] = STATICREFERENCE; /* RefTilt */
+	u[2] = PANSTATICREFERENCE;	 /* RefPan */
+	u[3] = TILTSTATICREFERENCE; /* RefTilt */
 
 	y[0] = 0.0; /* OutPan */
 	y[1] = 0.0; /* OutTilt */
@@ -114,8 +114,8 @@ int main()
 
 	int nextTime = clock() + TIME_STEP_MICROS;
 
-	uint16_t tiltControlSignal;
-	uint16_t panControlSignal;
+	uint16_t tiltControlSignal = 0;
+	uint16_t panControlSignal = 0;
 
 	/* simple loop, the time is incremented by the integration method */
 	while (my20simSubmodel.state != FullController::finished)
@@ -125,14 +125,14 @@ int main()
 		panEncoderValue = *((uint16_t *)esl_demo_map);
 		tiltEncoderValue = (uint16_t)(encoderValues >> 16);
 
-		panPosition = panEncoderValue * PANCONST;
-		tiltPosition = tiltEncoderValue * TILTCONST;
+		panPosition = (panEncoderValue  - panOffset) * PANCONST;
+		tiltPosition = (tiltEncoderValue - tiltOffset) * TILTCONST;
 
 		if (clock() >= nextTime)
 		{
 			nextTime = clock() + TIME_STEP_MICROS;
 			// printf("Clock and nextTime: %ld, %ld\n", clock(), nextTime);
-			// printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
+			printf("Encoder values: pan = %d, tilt = %d\n", panEncoderValue, tiltEncoderValue);
 			printf("Positions: pan = %f, tilt = %f\n", panPosition, tiltPosition);
 
 			/* call the submodel to calculate the output */
@@ -140,10 +140,8 @@ int main()
 			u[1] = tiltPosition; // tiltPosition is the position value from the tilt encoder
 			my20simSubmodel.Calculate(u, y);
 
-			uint16_t panControlSignal;
 			panControlSignal = ConvertControlSignal(y[0]);
 
-			uint16_t tiltControlSignal;
 			tiltControlSignal = ConvertControlSignal(y[1]);
 
 			printf("Control signals: pan = %d, tilt = %d\n", panControlSignal, tiltControlSignal);
@@ -158,6 +156,8 @@ int main()
 	/* perform the final calculations */
 	my20simSubmodel.Terminate(u, y);
 
+	*((uint32_t *)esl_demo_map) = 0;
+
 	munmap(esl_demo_map, HPS_0_ARM_A9_0_TOPENTITY_0_SPAN);
 	close(fd);
 
@@ -169,11 +169,11 @@ uint16_t ConvertControlSignal(XXDouble value)
 {
 	if (value > 0)
 	{
-		return 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(value * 100));
+		return 1 << DIRECTION_BIT_OFFSET | ((uint8_t)(value * MAX_PWM_VALUE));
 	}
 	else if (value < 0)
 	{
-		return 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-value) * 100));
+		return 0 << DIRECTION_BIT_OFFSET | ((uint8_t)((-value) * MAX_PWM_VALUE));
 	}
 	else
 	{
@@ -184,7 +184,7 @@ uint16_t ConvertControlSignal(XXDouble value)
 void PerformHomeSequence() 
 {
 	// Homing procedure, move at 25% speed in one direction
-	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << TILT_PWM_VALUE_OFFSET) | ((1 << DIRECTION_BIT_OFFSET) | 10);
+	*((uint32_t *)esl_demo_map) = (((0 << DIRECTION_BIT_OFFSET) | 10) << TILT_PWM_VALUE_OFFSET) | ((0 << DIRECTION_BIT_OFFSET) | 10);
 	sleep(3);
 	*((uint32_t *)esl_demo_map) = 0;
 	usleep(30);
