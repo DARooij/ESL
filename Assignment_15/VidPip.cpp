@@ -40,8 +40,9 @@ static GstFlowReturn new_sample (GstElement *sink, gpointer *data) {
   GstSample *sample;
   GstStructure *structure;
   GstCaps *caps;
+  GstMapInfo map;
   gint width, height;
-
+  GstBuffer *buffer;
 
   /* Retrieve the buffer */
   g_signal_emit_by_name (sink, "pull-sample", &sample);
@@ -58,14 +59,15 @@ static GstFlowReturn new_sample (GstElement *sink, gpointer *data) {
   }
 
    structure = gst_caps_get_structure (caps, 0);
-   if(gst_structure_get_int (structure, "width", &width) && gst_structure_get_int (structure, "height", &height)) {
-    g_print ("Width: %d, Height: %d\n", width, height);  
+   buffer = gst_sample_get_buffer(sample);
+   if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+        g_print("Es gucci man bro\n");
    } else {
-    g_print ("Could not get width and height from caps\n");
-    return GST_FLOW_FLUSHING;
+        g_print("No man, no es gucci\n");
    }
 
-  return GST_FLOW_OK;
+   gst_buffer_unmap(buffer, &map);
+   return GST_FLOW_OK;
 }
 
 int main (int   argc,

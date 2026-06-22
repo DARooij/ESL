@@ -1,13 +1,18 @@
+#include <opencv2/opencv.hpp>
+#include "object_tracker.hpp" 
+
 #include <gst/gst.h>
 #include <glib.h>
+ObjectTracker tracker;
 
 static gboolean
 bus_call (GstBus     *bus,
           GstMessage *msg,
           gpointer    data)
 {
-  GMainLoop *loop = (GMainLoop *) data;
-
+  GMainLoop *loop;
+  GstElement *pipeline, *source, *vidconv, *encoder, *decoder, *sink;
+  GstCaps *format;
   switch (GST_MESSAGE_TYPE (msg)) {
 
     case GST_MESSAGE_EOS:
@@ -58,11 +63,11 @@ static GstFlowReturn new_sample (GstElement *sink, gpointer data) {
   if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
       
       // 4. Wrap the raw data directly into an OpenCV Mat (Zero Copy)
-      cv::Mat frame(height, width, CV_8UC3, (void*)map.data);
+      cv::Mat frame(height, width, CV_8UC3, (char*)map.data);
 
       // Pass it to your object tracker object (passed via the user 'data' pointer)
-      ObjectTracker *tracker = (ObjectTracker*)data;
-      tracker->processFrame(frame);
+      // ObjectTracker *tracker = (ObjectTracker*)data;
+      tracker.processFrame(frame);
 
       gst_buffer_unmap(buffer, &map);
   }
@@ -99,7 +104,7 @@ int main (int argc, char *argv[])
 
   g_object_set (source, "device", "/dev/video0", NULL);
   g_object_set (sink, "emit-signals", TRUE, NULL);
-  g_signal_connect (sink, "new-sample", G_CALLBACK (new_sample), NULL);
+  g_signal_connect (sink, "new-sample", G_CALLBACK (new_sample), &tracker);
 
   /* Set up the caps we want from the camera */
   format = gst_caps_from_string("video/x-raw, width=320, height=240, framerate=30/1");
