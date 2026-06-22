@@ -9,7 +9,7 @@ public:
     ObjectTracker();
     
     // Takes the raw frame from GStreamer and processes it
-    void processFrame(cv::Mat& frame);
+    cv::Mat processFrame(cv::Mat& frame);
 
 private:
     cv::Scalar mask_lower_bound_;
