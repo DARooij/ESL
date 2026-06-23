@@ -1,14 +1,16 @@
 #include "object_tracker.hpp"
 #include <glib.h>
+#include <tuple>
 
 ObjectTracker::ObjectTracker() {
-    mask_lower_bound_ = cv::Scalar(0, 100, 100);   // Lower bound of red hue
-    mask_upper_bound_ = cv::Scalar(10, 255, 255);  // Upper bound of red hue
+    mask_lower_bound_ = cv::Scalar(42, 45, 56);   // Lower bound of green hue
+    mask_upper_bound_ = cv::Scalar(93, 255, 255);  // Upper bound of green hue
 }
 
-cv::Mat ObjectTracker::processFrame(cv::Mat& frame) {
+std::tuple<double, double> ObjectTracker::processFrame(cv::Mat& frame) {
+    std::tuple<double, double> return_value = std::make_tuple(0.0, 0.0);
     g_print("Received frame of size: %dx%d\n", frame.cols, frame.rows);
-    if (frame.empty()) return frame;
+    if (frame.empty()) return return_value;
 
     cv::Mat hsv_frame, mask;
 
@@ -30,8 +32,6 @@ cv::Mat ObjectTracker::processFrame(cv::Mat& frame) {
     // 4. Calculate Moments
     cv::Moments moments = cv::moments(mask, true);
     g_print("Moments calculated: m00=%f, m10=%f, m01=%f\n", moments.m00, moments.m10, moments.m01);
-    // Lazily prepare a debug frame only if we intend to visualize
-    cv::Mat debug_frame; 
 
     if (moments.m00 > 100) { // Added a minimum area threshold (100 pixels) to ignore tiny noise streaks
         // Calculate center of gravity (COG)
@@ -44,11 +44,7 @@ cv::Mat ObjectTracker::processFrame(cv::Mat& frame) {
         
         std::cout << "Object at: x=" << normalized_x << ", y=" << normalized_y << "      \r" << std::flush;
 
-        // Draw visual indicators
-        debug_frame = frame.clone(); 
-        cv::circle(debug_frame, cv::Point2d(cog_x, cog_y), 10, cv::Scalar(255, 0, 255), -1);
-    } else {
-        debug_frame = frame.clone(); // Just reference original if no object found
-    }
-    return debug_frame;
+        return_value = std::make_tuple(normalized_x, normalized_y);
+    } 
+    return return_value;
 }

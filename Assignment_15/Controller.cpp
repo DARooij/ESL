@@ -2,44 +2,30 @@
  * This file implements the controller and interfaces with hardware.
  */
 
-#include <stdio.h>
-#include <cstdint>
-#include <string.h>
-#include <time.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
+#include "Controller.hpp"
 
-/* 20-sim submodel class include file */
-#include "FullController/FullController.h"
-#include "soc_system.h"
+void Controller::setReference(uint16_t _panRef, uint16_t _tiltRef)
+{
+	panRef = static_cast<double>(_panRef) * errorGain + panPosition;
+	tiltRef = static_cast<double>(_tiltRef) * errorGain + tiltPosition;
+}
 
-#define DIRECTION_BIT_OFFSET 8
+void Controller::setGain(uint16_t _errorGain)
+{
+	errorGain = _errorGain;
+}
 
-#define TIME_STEP_MICROS 10000
-#define MAX_PWM_VALUE 20
-#define TILT_PWM_VALUE_OFFSET 9
+double Controller::getpanPosition()
+{
+	return (double)panPosition;
+}
 
-#define TILTCONST 3.14 / 9856
-#define PANCONST 3.14 / 10852 
+double Controller::gettiltPosition()
+{
+	return (double)tiltPosition;
+}
 
-#define RAWSLACK 100
-
-// Function prototypes
-uint16_t ConvertControlSignal(XXDouble value);
-void PerformHomeSequence();
- 
-uint8_t *esl_demo_map = NULL;
-uint32_t encoderValues = 0;
-
-uint16_t panMinValue = 0;
-uint16_t panMaxValue = 0;
-uint16_t tiltMinValue = 0;
-uint16_t tiltMaxValue = 0;
-
-
-/* the main function */
-int main()
+int Controller::run()
 {
 	int fd = 0;
 
@@ -65,11 +51,11 @@ int main()
 	uint16_t panE = 0;
 	uint16_t tiltE = 0;
 
-	XXDouble panPosition = 0.0;
-	XXDouble tiltPosition = 0.0;
+	panPosition = 0.0;
+	tiltPosition = 0.0;
 
 	PerformHomeSequence();
-	
+
 	panE = (panEncoderValue + RAWSLACK - panMinValue);
 	tiltE = (tiltEncoderValue + RAWSLACK - tiltMinValue);
 
@@ -85,8 +71,8 @@ int main()
 	/* initialize the inputs and outputs with correct initial values */
 	u[0] = panPosition;	 /* PosPan */
 	u[1] = tiltPosition; /* PosTilt */
-	u[2] = panRef;	 /* RefPan */
-	u[3] = tiltRef; /* RefTilt */
+	u[2] = panRef;		 /* RefPan */
+	u[3] = tiltRef;		 /* RefTilt */
 
 	y[0] = 0.0; /* OutPan */
 	y[1] = 0.0; /* OutTilt */
@@ -96,7 +82,7 @@ int main()
 	/* initialize the submodel itself and calculate the outputs for t=0.0 */
 	my20simSubmodel.Initialize(u, y, 0.0);
 	my20simSubmodel.SetFinishTime(0.0); /* set the finish time to infinite, so the model will run until we stop it */
-	
+
 	printf("Time: %f\n", my20simSubmodel.GetTime());
 
 	int nextTime = clock() + TIME_STEP_MICROS;
@@ -129,7 +115,7 @@ int main()
 			printf("Reference position: pan = %f, tilt = %f\n", panRef, tiltRef);
 
 			/* call the submodel to calculate the output */
-			u[0] = panPosition;  // panPosition is the position value from the pan encoder
+			u[0] = panPosition;	 // panPosition is the position value from the pan encoder
 			u[1] = tiltPosition; // tiltPosition is the position value from the tilt encoder
 			my20simSubmodel.Calculate(u, y);
 
@@ -138,7 +124,6 @@ int main()
 			tiltControlSignal = ConvertControlSignal(y[1]);
 
 			printf("Control signals: pan = %d, tilt = %d\n", panControlSignal, tiltControlSignal);
-
 
 			printf("Time: %f\n", my20simSubmodel.GetTime());
 		}
@@ -158,7 +143,7 @@ int main()
 	return 0;
 }
 
-uint16_t ConvertControlSignal(XXDouble value)
+uint16_t Controller::ConvertControlSignal(XXDouble value)
 {
 	if (value > 0)
 	{
@@ -174,7 +159,7 @@ uint16_t ConvertControlSignal(XXDouble value)
 	}
 }
 
-void PerformHomeSequence() 
+void Controller::PerformHomeSequence()
 {
 	// Homing procedure, move at 25% speed in one direction
 	*((uint32_t *)esl_demo_map) = (((0 << DIRECTION_BIT_OFFSET) | 10) << TILT_PWM_VALUE_OFFSET) | ((0 << DIRECTION_BIT_OFFSET) | 10);
@@ -185,15 +170,11 @@ void PerformHomeSequence()
 	encoderValues = *((uint32_t *)esl_demo_map);
 	panMinValue = *((uint16_t *)esl_demo_map) - RAWSLACK;
 	tiltMinValue = (uint16_t)(encoderValues >> 16) - RAWSLACK;
-	
-	printf("Encoder min values: pan = %d, tilt = %d\n", panMinValue, tiltMinValue);
 
 	*((uint32_t *)esl_demo_map) = (((1 << DIRECTION_BIT_OFFSET) | 10) << TILT_PWM_VALUE_OFFSET) | ((1 << DIRECTION_BIT_OFFSET) | 10);
 	sleep(3);
 	*((uint32_t *)esl_demo_map) = 0;
 	usleep(30);
-
-	printf("Encoder max values: pan = %d, tilt = %d\n", panMaxValue, tiltMaxValue);
 
 	encoderValues = *((uint32_t *)esl_demo_map);
 	panMaxValue = *((uint16_t *)esl_demo_map) + RAWSLACK;

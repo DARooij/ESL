@@ -51,3 +51,5 @@ In around 15-25 pages
 
 ## Questions to ask
 1. 
+
+g++ VidPip.cpp object_tracker.cpp Controller.cpp FullController/*.cpp FullController/common/*.cpp -o VidPip $(pkg-config --cflags --libs gstreamer-1.0 opencv4)

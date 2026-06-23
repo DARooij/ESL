@@ -1,9 +1,12 @@
 #include <opencv2/opencv.hpp>
 #include "object_tracker.hpp" 
+#include <thread>
+#include "Controller.hpp"
 
 #include <gst/gst.h>
 #include <glib.h>
 
+Controller controller;
 ObjectTracker tracker;
 
 static gboolean
@@ -42,8 +45,6 @@ bus_call (GstBus     *bus,
 
 
 static GstFlowReturn new_sample (GstElement *sink, gpointer data) {
-  // Extract the appsrc we passed in via g_signal_connect
-//   GstElement *appsrc = (GstElement *)data; 
   
   GstSample *sample;
   GstStructure *structure;
@@ -60,32 +61,17 @@ static GstFlowReturn new_sample (GstElement *sink, gpointer data) {
   gst_structure_get_int(structure, "width", &width);
   gst_structure_get_int(structure, "height", &height);
   buffer = gst_sample_get_buffer(sample);
+  std::tuple<double, double> normalized_values;
 
   if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-        // 1. Give frame to OpenCV
         cv::Mat frame(height, width, CV_8UC3, (char*)map.data);
-        cv::Mat processed_frame = tracker.processFrame(frame);
-
-        // 2. Allocate a new GStreamer buffer for the output
-        // guint size = processed_frame.total() * processed_frame.elemSize();
-        // GstBuffer *out_buffer = gst_buffer_new_allocate(NULL, size, NULL);
-        // GstMapInfo out_map;
-                
-        // // 3. Copy OpenCV data into the new GStreamer buffer
-        // gst_buffer_map(out_buffer, &out_map, GST_MAP_WRITE);
-        // memcpy(out_map.data, processed_frame.data, size);
-        // gst_buffer_unmap(out_buffer, &out_map);
-
-        // // 4. Push the buffer into the Output Pipeline
-        // GstFlowReturn ret;
-        // g_signal_emit_by_name(appsrc, "push-buffer", out_buffer, &ret);
-        
-        // Clean up the output buffer
-        // gst_buffer_unref(out_buffer);
+        normalized_values = tracker.processFrame(frame);
    }
 
+   controller.setReference(std::get<0>(normalized_values), std::get<1>(normalized_values));
+
    gst_buffer_unmap(buffer, &map);
-   gst_sample_unref(sample); // Don't forget to unref the sample to prevent memory leaks!
+   gst_sample_unref(sample); 
    return GST_FLOW_OK;
 }
 
@@ -126,16 +112,12 @@ if (!pipeline || !source || !encoder || !decoder || !convert || !tee || !sink ||
     return -1;
   }
 
-  g_object_set (source, "device", "/dev/video0", NULL);
+  g_object_set (source, "device", "/dev/video7", NULL);
   g_object_set (sink, "emit-signals", TRUE, NULL);
   g_object_set (videosink, "sync", FALSE, "async", FALSE, NULL);
   GstCaps *app_caps = gst_caps_from_string("video/x-raw, format=BGR");
   g_object_set(sink, "caps", app_caps, NULL);
   gst_caps_unref(app_caps);
-
-//   GstCaps *src_caps = gst_caps_from_string("video/x-raw, format=BGR, width=320, height=240, framerate=30/1");
-//   g_object_set(appsrc, "caps", src_caps, "format", GST_FORMAT_TIME, "is-live", TRUE, NULL);
-//   gst_caps_unref(src_caps);
 
   g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), NULL);
 
@@ -146,30 +128,18 @@ if (!pipeline || !source || !encoder || !decoder || !convert || !tee || !sink ||
   bus_watch_id = gst_bus_add_watch (bus, bus_call, loop);
   gst_object_unref (bus);
 
-  /* we add all elements into the pipeline */
-  /* file-source | ogg-demuxer | vorbis-decoder | converter | alsa-output */
-gst_bin_add_many (GST_BIN (pipeline),
-                    source, tee, queue_cv, encoder, decoder, convert, sink, 
-                    queue_vid, vid_convert, videosink, NULL);
-  /* we link the elements together */
-  /* file-source -> ogg-demuxer ~> vorbis-decoder -> converter -> alsa-output */
-//   gst_element_link (source, encoder);
+  gst_bin_add_many(GST_BIN(pipeline),
+                   source, tee, queue_cv, encoder, decoder, convert, sink,
+                   /*queue_vid, vid_convert, videosink, */NULL);
+
   if (!gst_element_link(source, tee) || !gst_element_link(tee, queue_cv) 
     || !gst_element_link(queue_cv, encoder) || !gst_element_link_filtered(encoder, decoder, format) 
     || !gst_element_link_many(decoder, convert, sink, NULL) 
-    || !gst_element_link(tee, queue_vid) || !gst_element_link_many(queue_vid, vid_convert, videosink, NULL))
+    /*|| !gst_element_link(tee, queue_vid) || !gst_element_link_many(queue_vid, vid_convert, videosink, NULL)*/)
   {
       g_printerr("Elements could not be linked. Exiting.\n");
       return -1;
   }
-  //   gst_element_link_many (appsrc, out_convert, videosink, NULL);
-
-  /* note that the demuxer will be linked to the decoder dynamically.
-     The reason is that Ogg may contain various streams (for example
-     audio and video). The source pad(s) will be created at run time,
-     by the demuxer when it detects the amount and nature of streams.
-     Therefore we connect a callback function which will be executed
-     when the "pad-added" is emitted.*/
 
   gst_caps_unref(format);
 
@@ -177,6 +147,8 @@ gst_bin_add_many (GST_BIN (pipeline),
   g_print ("Now playing: %s\n", argv[1]);
   gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
+  /* Create thread to run the controller loop */
+  std::thread controller_thread(&Controller::run, &controller);
 
   /* Iterate */
   g_print ("Running...\n");
@@ -191,6 +163,7 @@ gst_bin_add_many (GST_BIN (pipeline),
   gst_object_unref (GST_OBJECT (pipeline));
   g_source_remove (bus_watch_id);
   g_main_loop_unref (loop);
+  controller_thread.join();
 
   return 0;
 }
